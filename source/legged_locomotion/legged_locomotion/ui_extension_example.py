@@ -12,7 +12,7 @@ def some_public_function(x: int):
     # 一个简单的示例公共函数：打印信息并返回 x 的 x 次幂。
     # This demonstrates how other extensions can import and use functions from this module.
     # 该函数用于演示其他扩展如何导入并使用此模块中的函数。
-    print("[Go2_locomotion] some_public_function was called with x: ", x)
+    print("[legged_locomotion] some_public_function was called with x: ", x)
     return x**x
 
 
@@ -28,7 +28,7 @@ class ExampleExtension(omni.ext.IExt):
     def on_startup(self, ext_id):
         # Called by the Omniverse when the extension is enabled.
         # 当扩展被启用时由 Omniverse 调用（初始化入口）。
-        print("[Go2_locomotion] startup")
+        print("[legged_locomotion] startup")
 
         # Simple internal counter to demonstrate stateful UI updates.
         # 简单内部计数器，用于示例化有状态的 UI 更新。
@@ -72,4 +72,4 @@ class ExampleExtension(omni.ext.IExt):
         # 当扩展被禁用时由 Omniverse 调用（清理入口）。
         # If you create persistent resources (threads, handlers, window references), clean them up here.
         # 如果创建了持久化资源（线程、回调处理器、窗口引用等），应在此处释放/注销。
-        print("[Go2_locomotion] shutdown")
+        print("[legged_locomotion] shutdown")

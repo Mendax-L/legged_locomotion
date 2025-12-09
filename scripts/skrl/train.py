@@ -111,7 +111,7 @@ from isaaclab_rl.skrl import SkrlVecEnvWrapper
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-import Go2_locomotion.tasks  # noqa: F401
+import legged_locomotion.tasks  # noqa: F401
 
 # config shortcuts
 if args_cli.agent is None:

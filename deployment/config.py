@@ -6,8 +6,8 @@ class Config:
     use_gamepad = True
     fixed_command = False  # True 则不使用手柄，使用下面的固定命令 False 使用手柄
     command = [0.0, -0, 0, 0]
-    model_path = "/home/luxiao/Go2_locomotion/logs/rsl_rl/unitree_go2_flat/2025-11-19_19-44-38/exported/policy.pt"  # flat
-    xml_path = "/home/luxiao/Go2_locomotion/deployment/resources/go2/scene.xml"
+    model_path = "/home/luxiao/legged_locomotion/logs/rsl_rl/unitree_go2_flat/2025-11-19_19-44-38/exported/policy.pt"  # flat
+    xml_path = "/home/luxiao/legged_locomotion/deployment/resources/go2/scene.xml"
 
     # mujoco simulation
     visualization = True

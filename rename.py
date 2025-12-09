@@ -1,7 +1,7 @@
 import os
 
 # 定义需要查找和替换的字符串
-old_names = ['Go2_locomotion', 'GO2_locomotion']
+old_names = ['legged_locomotion', 'legged_locomotion']
 new_name = 'legged_locomotion'
 
 # 获取当前目录
