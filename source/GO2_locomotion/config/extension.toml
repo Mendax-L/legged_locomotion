@@ -23,7 +23,7 @@ keywords = ["extension", "template", "isaaclab"]
 # NOTE: Add additional dependencies here
 
 [[python.module]]
-name = "GO2_locomotion"
+name = "Go2_locomotion"
 
 [isaaclab_settings]
 # TODO: Uncomment and list any apt dependencies here.

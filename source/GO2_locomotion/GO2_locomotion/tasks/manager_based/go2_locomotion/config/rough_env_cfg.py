@@ -10,10 +10,10 @@ from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import Lo
 ##
 # Pre-defined configs
 ##
-from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
+from isaaclab_assets.robots.unitree import UNITREE_Go2_CFG  # isort: skip
 # Pre-defined configs
 # 预定义配置
-# (保留英文注释) 导入单个已定义好的机器人配置（UNITREE_GO2_CFG），用于在下面的环境配置中设置具体机器人模型。
+# 导入单个已定义好的机器人配置（UNITREE_Go2_CFG），用于在下面的环境配置中设置具体机器人模型。
 # isort: skip 保持此导入位置以避免自动排序工具改变导入顺序（可能因依赖关系要求）。
 
 @configclass
@@ -25,13 +25,13 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # set robot asset and scanner prim path
         # 设置场景中使用的机器人资源以及高度扫描器（height_scanner）所绑定的 prim 路径
-        self.scene.robot = UNITREE_GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        # 将导入的 UNITREE_GO2_CFG 的 prim_path 替换为环境命名空间下的 Robot 路径（每个 env 有自己的命名空间）
+        self.scene.robot = UNITREE_Go2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        # 将导入的 UNITREE_Go2_CFG 的 prim_path 替换为环境命名空间下的 Robot 路径（每个 env 有自己的命名空间）
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
         # 将高度扫描器绑定到机器人 base 上，确保扫描器在每个环境中正确定位
 
         # scale down the terrains because the robot is small
-        # 缩小地形参数以适配体型更小的机器人（GO2），避免地形过大导致不合理的交互尺度
+        # 缩小地形参数以适配体型更小的机器人（Go2），避免地形过大导致不合理的交互尺度
         self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.025, 0.1)
         # boxes 子地形高度范围调整为较小值
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.06)
@@ -40,7 +40,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # 噪声步长（细化地形细节的粒度）
 
         # reduce action scale
-        # 缩小动作尺度（关节位置命令的缩放），适配 GO2 的舵机/控制范围
+        # 缩小动作尺度（关节位置命令的缩放），适配 Go2 的舵机/控制范围
         self.actions.joint_pos.scale = 0.25
 
         # event
