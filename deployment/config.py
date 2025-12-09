@@ -5,14 +5,14 @@ class Config:
     is_real = False  # FIXME real robot or not, See Args.
     use_gamepad = True
     fixed_command = False  # True 则不使用手柄，使用下面的固定命令 False 使用手柄
-    command = [0.0, -0, 0, 0]
-    model_path = "/home/luxiao/legged_locomotion/logs/rsl_rl/unitree_go2_flat/2025-11-19_19-44-38/exported/policy.pt"  # flat
-    xml_path = "/home/luxiao/legged_locomotion/deployment/resources/go2/scene.xml"
+    command = [0.0, -0, 0]
+    model_path = "logs/rsl_rl/unitree_go2_flat/2025-11-19_19-44-38/exported/policy.pt"  # flat
+    xml_path = "deployment/resources/go2/scene.xml"
 
     # mujoco simulation
     visualization = True
-    simulation_dt = 0.001
-    decimation = 20
+    simulation_dt = 0.005
+    decimation = 4
     control_dt = simulation_dt * decimation
 
     # kp & kd
@@ -44,7 +44,7 @@ class Config:
     ])
 
     # obs num
-    num_obs = 45  # 注意obs之间的顺序
+    num_obs = 48  # 注意obs之间的顺序
     num_critic_obs = 3 + 3  # com_displacement lin_vel, only for init
     num_actions = 12
 

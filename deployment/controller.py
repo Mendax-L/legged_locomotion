@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from pathlib import Path
 
-from deployment.utils.gamepad import Gamepad
+from deployment.utils.gamepad_win import Gamepad
 from deployment.interface import Go2_mujoco, Go2_real
 from deployment.config import Config
 
@@ -53,6 +53,7 @@ class BaseController:
 
     def processing_observation(
             self,
+            base_lin_vel,
             base_ang_vel,
             projected_gravity,
             command,
@@ -68,12 +69,13 @@ class BaseController:
 
         obs = np.hstack(
             (
-                base_ang_vel,  # 3
-                projected_gravity,  # 3
-                command,  # 3
-                dof_pos_isaac,  # 12
-                dof_vel_isaac,  # 12
-                last_action,  # 12
+                base_lin_vel,      # 3  <-- added (matches PolicyCfg order)
+                base_ang_vel,      # 3
+                projected_gravity, # 3
+                command,           # 3
+                dof_pos_isaac,     # 12
+                dof_vel_isaac,     # 12
+                last_action,       # 12
             )
         )
 
@@ -116,6 +118,7 @@ class BaseController:
 
         command = self.get_gamepad_command()
         self.obs = self.processing_observation(
+            base_lin_vel=np.array(self._robot.base_lin_vel),
             base_ang_vel=np.array(self._robot.base_ang_vel),
             projected_gravity=np.array(self._robot.projected_gravity),
             command=np.array(command),
@@ -183,6 +186,6 @@ class BaseController:
 
     def get_gamepad_command(self):
         if not self.cfg.fixed_command and self.gp.connected:
-            return np.array([self.gp.vel_x, self.gp.vel_y, 0, self.gp.vel_yaw])
+            return np.array([self.gp.vel_x, self.gp.vel_y, self.gp.vel_yaw])
         else:
             return self.cfg.command

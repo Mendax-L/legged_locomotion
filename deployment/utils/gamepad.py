@@ -6,7 +6,7 @@ import platform
 import sys
 
 # 关闭GUI可视化（用于headless运行）
-os.environ["SDL_VIDEODRIVER"] = "dummy"
+# os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 
 class Gamepad:
