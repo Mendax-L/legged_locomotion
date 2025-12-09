@@ -10,10 +10,10 @@ from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import Lo
 ##
 # Pre-defined configs
 ##
-from isaaclab_assets.robots.unitree import UNITREE_Go2_CFG  # isort: skip
+from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
 # Pre-defined configs
 # 预定义配置
-# 导入单个已定义好的机器人配置（UNITREE_Go2_CFG），用于在下面的环境配置中设置具体机器人模型。
+# 导入单个已定义好的机器人配置（UNITREE_GO2_CFG），用于在下面的环境配置中设置具体机器人模型。
 # isort: skip 保持此导入位置以避免自动排序工具改变导入顺序（可能因依赖关系要求）。
 
 @configclass
@@ -25,8 +25,8 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # set robot asset and scanner prim path
         # 设置场景中使用的机器人资源以及高度扫描器（height_scanner）所绑定的 prim 路径
-        self.scene.robot = UNITREE_Go2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        # 将导入的 UNITREE_Go2_CFG 的 prim_path 替换为环境命名空间下的 Robot 路径（每个 env 有自己的命名空间）
+        self.scene.robot = UNITREE_GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        # 将导入的 UNITREE_GO2_CFG 的 prim_path 替换为环境命名空间下的 Robot 路径（每个 env 有自己的命名空间）
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
         # 将高度扫描器绑定到机器人 base 上，确保扫描器在每个环境中正确定位
 
