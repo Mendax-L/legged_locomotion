@@ -23,7 +23,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
+from . import mdp
 
 ##
 # Pre-defined configs
@@ -38,7 +38,7 @@ from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 
 
 @configclass
-class MySceneCfg(InteractiveSceneCfg):
+class LeggedLocomotionCfg(InteractiveSceneCfg):
     """Configuration for the terrain scene with a legged robot."""
     # Configuration for the terrain scene with a legged robot.
     # 带有步态机器人的地形场景配置。
@@ -112,7 +112,7 @@ class CommandsCfg:
 
     base_velocity = mdp.UniformVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(10.0, 10.0),
+        resampling_time_range=(0.5, 5.0),
         rel_standing_envs=0.02,
         rel_heading_envs=1.0,
         heading_command=True,
@@ -132,7 +132,13 @@ class ActionsCfg:
     # Action specifications for the MDP.
     # MDP 的动作规范配置。
 
-    joint_pos = mdp.JointPositionActionCfg(asset_name="robot", joint_names=[".*"], scale=0.5, use_default_offset=True)
+    joint_pos = mdp.JointPositionActionCfg(
+        asset_name="robot",
+        joint_names=[".*"],
+        scale=0.25,
+        use_default_offset=True,
+        clip={".*": (-100.0, 100.0)}
+    )
     # joint_pos
     # 关节位置动作配置：对所有关节应用，缩放因子为 0.5，使用默认偏移
 
@@ -150,10 +156,11 @@ class ObservationsCfg:
         # Observations for policy group.
         # 策略组的观测项配置（各项顺序保留）。
 
-        # observation terms (order preserved)
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
-        # base_lin_vel
-        # 基础线速度观测项，添加均匀噪声扰动
+        # # observation terms (order preserved)
+        # base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
+        # # base_lin_vel
+        # # 基础线速度观测项，添加均匀噪声扰动
+        # 现实中不观测线速度，噪声很大
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
         # base_ang_vel
@@ -182,23 +189,40 @@ class ObservationsCfg:
         # actions
         # 上一步动作观测项
 
-        height_scan = ObsTerm(
-            func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
-            noise=Unoise(n_min=-0.1, n_max=0.1),
-            clip=(-1.0, 1.0),
-        )
-        # height_scan
+        # height_scan = ObsTerm(
+        #     func=mdp.height_scan,
+        #     params={"sensor_cfg": SceneEntityCfg("height_scanner")},
+        #     noise=Unoise(n_min=-0.1, n_max=0.1),
+        #     clip=(-1.0, 1.0),
+        # )
         # 高度扫描观测项（RayCaster），绑定到 height_scanner 传感器，含噪声与裁剪范围
 
         def __post_init__(self):
             self.enable_corruption = True
-            self.concatenate_terms = True
+            # 拼接的影响可做测试
+            self.concatenate_terms = False
         # __post_init__
         # 后处理：启用观测损坏（corruption）并将各项拼接为单一观测向量
-
+        
+    @configclass
+    class CriticCfg(ObsGroup):
+        """Observations for critic group (can have more privileged information)."""
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
+        projected_gravity = ObsTerm(func=mdp.projected_gravity)
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel)
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel)
+        actions = ObsTerm(func=mdp.last_action)
+        height_scan = ObsTerm(
+            func=mdp.height_scan,
+            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
+            clip=(-1.0, 1.0),
+        )
     # observation groups
     policy: PolicyCfg = PolicyCfg()
+    critic: CriticCfg = CriticCfg()
+
+
     # observation groups
     # 观测组：包含 policy 组
 
@@ -320,23 +344,23 @@ class RewardsCfg:
     # 任务：跟踪角速度（偏航），指数核，作为次要奖励
 
     # -- penalties
-    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
+    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-1.0)
     # lin_vel_z_l2
     # 惩罚：竖直方向线速度 L2（避免跳跃）
 
-    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
+    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-1.0)
     # ang_vel_xy_l2
     # 惩罚：平面内滚摆角速度 L2（保持稳定）
 
-    dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
+    dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0)
     # dof_torques_l2
     # 惩罚：关节扭矩 L2（鼓励省能量）
 
-    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
+    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-1.0)
     # dof_acc_l2
     # 惩罚：关节加速度 L2（平滑动作）
 
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-1.0)
     # action_rate_l2
     # 惩罚：动作变化率 L2（减少频繁动作变化）
 
@@ -361,13 +385,36 @@ class RewardsCfg:
     # 惩罚：不希望的接触（如大腿与地面接触）
 
     # -- optional penalties
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=0.0)
-    # flat_orientation_l2
-    # 可选惩罚：姿态偏离（目前权重为 0）
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1.0)
+    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-1.0)
+    base_height_l2 = RewTerm(
+        func=mdp.safe_base_height_l2,
+        weight=-1.0,
+        params={"target_height": 0.32, "sensor_cfg": SceneEntityCfg("height_scanner")},
+    )
+    body_lin_acc_l2 = RewTerm(func=mdp.body_lin_acc_l2, weight=-1.0)
 
-    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=0.0)
-    # dof_pos_limits
-    # 可选惩罚：关节位置限制（目前权重为 0）
+    # style
+    encourage_forward = RewTerm(
+        func=mdp.encourage_forward,
+        weight=1.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+
+    cheetah = RewTerm(
+        func=mdp.encourage_default_pose,
+        weight=1.0,
+        params={"hip_weight": 1.0, "thigh_weight": 0, "calf_weight": 0, "asset_cfg": SceneEntityCfg("robot")}
+    )
+
+    velocity_driven_gait = RewTerm(
+        func=mdp.velocity_driven_gait,
+        weight=1.0,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+
 
 
 @configclass
@@ -411,7 +458,7 @@ class LocomotionVelocityRoughEnvCfg(ManagerBasedRLEnvCfg):
     # 行走速度跟踪环境的总体配置。
 
     # Scene settings
-    scene: MySceneCfg = MySceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: LeggedLocomotionCfg = LeggedLocomotionCfg(num_envs=4096, env_spacing=2.5)
     # Scene settings
     # 场景设置：环境数量与间距
 
@@ -442,7 +489,8 @@ class LocomotionVelocityRoughEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
         self.sim.physics_material = self.scene.terrain.physics_material
-        self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
+        self.sim.physx.gpu_max_patch_count = 2 ** 26
+        self.sim.physx.gpu_max_rigid_patch_count = 10 * 2 ** 18 #重要！！！
         # simulation settings
         # 仿真设置：物理步长、渲染间隔、物理材质、PhysX 参数
 
