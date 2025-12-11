@@ -200,7 +200,7 @@ class ObservationsCfg:
         def __post_init__(self):
             self.enable_corruption = True
             # 拼接的影响可做测试
-            self.concatenate_terms = False
+            self.concatenate_terms = True
         # __post_init__
         # 后处理：启用观测损坏（corruption）并将各项拼接为单一观测向量
         
@@ -366,11 +366,11 @@ class RewardsCfg:
 
     feet_air_time = RewTerm(
         func=mdp.feet_air_time,
-        weight=0.125,
+        weight=1.0,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
             "command_name": "base_velocity",
-            "threshold": 0.5,
+            "threshold": 0.25,
         },
     )
     # feet_air_time
