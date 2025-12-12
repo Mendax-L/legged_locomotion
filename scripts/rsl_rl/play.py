@@ -77,7 +77,7 @@ import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-import legged_locomotion.tasks  # noqa: F401
+# PLACEHOLDER: Extension template (do not remove this comment)
 
 
 @hydra_task_config(args_cli.task, args_cli.agent)
@@ -185,7 +185,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # agent stepping
             actions = policy(obs)
             # env stepping
-            obs, _, _, _ = env.step(actions)
+            obs, _, dones, _ = env.step(actions)
+            # reset recurrent states for episodes that have terminated
+            policy_nn.reset(dones)
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video
