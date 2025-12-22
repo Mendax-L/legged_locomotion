@@ -111,6 +111,37 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 
+# --------------  新增代码  --------------
+def learn_with_debug(runner, num_learning_iterations, init_at_random_ep_len=True):
+    """原封不动调用 runner.learn，但在每次 PPO update 前打印 reward/advantage 统计."""
+    # 取出 PPO 算法的引用
+    ppo = runner.alg
+
+    # 保存原始 update 函数
+    original_update = ppo.update
+
+    def debug_update(self):
+        # ===== 打印统计 =====
+        # 这些数据在 runner 的 rollout 缓冲区里
+        rewards   = self.storage.rewards.flatten()   # (num_steps*num_envs,)
+        advantages = self.storage.advantages.flatten()
+        with torch.no_grad():
+            print(f"[DEBUG] reward max={rewards.max().item():.2f}, "
+                  f"adv  max={advantages.max().item():.2f}, "
+                  f"reward min={rewards.min().item():.2f}, "
+                  f"adv  min={advantages.min().item():.2f}")
+        # ===================
+        return original_update()   # 调用真正的 update
+
+    # 把 update 替换成带调试的版本
+    ppo.update = debug_update.__get__(ppo, type(ppo))
+
+    # 开始训练
+    runner.learn(num_learning_iterations=num_learning_iterations,
+                 init_at_random_ep_len=init_at_random_ep_len)
+
+
+
 @hydra_task_config(args_cli.task, args_cli.agent)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     """Train with RSL-RL agent."""
@@ -213,7 +244,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
 
     # run training
-    runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
+    # runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
+
+    # runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
+    learn_with_debug(runner,
+                    num_learning_iterations=agent_cfg.max_iterations,
+                    init_at_random_ep_len=True)
 
     print(f"Training time: {round(time.time() - start_time, 2)} seconds")
 

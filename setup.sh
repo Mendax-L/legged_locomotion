@@ -3,7 +3,7 @@ export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6
 # conda init
 # conda activate env_isaaclab
 
-export CUDA_VISIBLE_DEVICES=1;python scripts/rsl_rl/train.py --task=Isaac-Velocity-Flat-Unitree-Go2-v0 --num_env 4096 --headless --experiment_name flat_vel --max_iterations 100000 --video
+export CUDA_VISIBLE_DEVICES=2;python scripts/rsl_rl/train.py --task=Isaac-Velocity-Flat-Unitree-Go2-v0 --num_env 4096 --headless --experiment_name flat_vel --max_iterations 100000 --video
 
 # export CUDA_VISIBLE_DEVICES=1;python scripts/rsl_rl/play.py --task=Isaac-Velocity-Flat-Unitree-Go2-v0 --checkpoint logs/rsl_rl/unitree_go2_flat/2025-12-10_16-13-19/model_22850.pt --enable_cameras --video --num_env 512 --video_length 2000 --headless
 # export CUDA_VISIBLE_DEVICES=6;python scripts/rsl_rl/play.py --task=Isaac-Velocity-Flat-Unitree-Go2-v0 --checkpoint logs/rsl_rl/unitree_go2_flat/2025-11-19_19-44-38/model_9999.pt --enable_cameras --video --num_env 512 --video_length 2000 --headless

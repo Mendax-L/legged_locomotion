@@ -190,7 +190,9 @@ def encourage_forward(env, asset_cfg=SceneEntityCfg("robot")) -> torch.Tensor:
     forward_speed = torch.sum(vel_w * fwd_dir_world, dim=1)
     speed_norm = torch.norm(vel_w, dim=1)
     alignment = forward_speed / (speed_norm + 1e-8)
-
+    
+    if not torch.isfinite(alignment).all():         # 新增
+        print("encourage_forward 出现 inf!", alignment)
     return alignment
 
 
@@ -249,6 +251,8 @@ def encourage_default_pose(
     is_static = speed < speed_threshold
     reward = torch.where(is_static, reward_static, reward_active)
 
+    if not torch.isfinite(reward).all():         # 新增
+        print("encourage_default_pose 出现 inf!", reward)
     return reward
 
 
@@ -387,7 +391,8 @@ def velocity_driven_gait(
     # Step 3: Interpolated reward
     # reward = lambda_trot * reward_trot + lambda_bound * reward_bound + reward_consistent
     reward = 1 * reward_trot + 0 * reward_bound + reward_consistent
-
+    if not torch.isfinite(reward).all():         # 新增
+        print("velocity_driven_gait 出现 inf!", reward)
     return reward  # shape: [num_envs]
 
 
@@ -414,4 +419,37 @@ def safe_base_height_l2(
         adjusted_target_height = target_height
 
     # Compute the L2 squared penalty
-    return torch.square(asset.data.root_pos_w[:, 2] - adjusted_target_height).clamp(-100.0, 100.0)
+    reward =  torch.square(asset.data.root_pos_w[:, 2] - adjusted_target_height).clamp(-100.0, 100.0)
+    if not torch.isfinite(reward).all():         # 新增
+        print("safe_base_height_l2 出现 inf!", reward)
+    return reward
+# mdp/rewards.py  末尾追加
+import functools, inspect, isaaclab.managers as mgr
+
+def inf_guard(fn, abs_limit=1e3):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        ret = fn(*args, **kwargs)
+
+        # 1) NaN/Inf
+        bad_finite = ~torch.isfinite(ret)
+        # 2) 绝对值爆大（finite 但危险）
+        bad_mag = ret.abs() > abs_limit
+
+        if bad_finite.any() or bad_mag.any():
+            # 打印最极端的值，方便定位
+            mx = ret.max().item()
+            mn = ret.min().item()
+            print(f"[REW-GUARD] {fn.__module__}.{fn.__name__} bad! min={mn:.3e}, max={mx:.3e}")
+
+            # 直接钳制（先止血）
+            ret = torch.nan_to_num(ret, nan=0.0, posinf=0.0, neginf=0.0)
+            ret = ret.clamp(-abs_limit, abs_limit)
+        return ret
+    return wrapper
+
+import sys, inspect
+_this = sys.modules[__name__]
+for name, obj in list(vars(_this).items()):
+    if inspect.isfunction(obj) and obj.__module__ == __name__:
+        setattr(_this, name, inf_guard(obj, abs_limit=1e3))

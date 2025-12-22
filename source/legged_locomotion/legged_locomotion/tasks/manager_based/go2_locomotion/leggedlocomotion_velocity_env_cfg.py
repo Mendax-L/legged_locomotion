@@ -153,56 +153,34 @@ class ObservationsCfg:
     @configclass
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
-        # Observations for policy group.
-        # 策略组的观测项配置（各项顺序保留）。
-
-        # # observation terms (order preserved)
-        # base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
-        # # base_lin_vel
-        # # 基础线速度观测项，添加均匀噪声扰动
-        # 现实中不观测线速度，噪声很大
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
-        # base_ang_vel
-        # 基础角速度观测项，添加均匀噪声扰动
+
 
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
-        # projected_gravity
-        # 投影重力观测项，带噪声
+
 
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-        # velocity_commands
-        # 速度命令观测项（来自命令管理器）
+
 
         joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        # joint_pos
-        # 相对关节位置观测项，带小幅噪声
+
 
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
-        # joint_vel
-        # 相对关节速度观测项，带较大噪声范围
+
 
         actions = ObsTerm(func=mdp.last_action)
-        # actions
-        # 上一步动作观测项
 
-        # height_scan = ObsTerm(
-        #     func=mdp.height_scan,
-        #     params={"sensor_cfg": SceneEntityCfg("height_scanner")},
-        #     noise=Unoise(n_min=-0.1, n_max=0.1),
-        #     clip=(-1.0, 1.0),
-        # )
-        # 高度扫描观测项（RayCaster），绑定到 height_scanner 传感器，含噪声与裁剪范围
 
-        def __post_init__(self):
-            self.enable_corruption = True
-            # 拼接的影响可做测试
-            self.concatenate_terms = True
-        # __post_init__
-        # 后处理：启用观测损坏（corruption）并将各项拼接为单一观测向量
+        # def __post_init__(self):
+        #     self.enable_corruption = True
+        #     # 拼接的影响可做测试
+        #     self.concatenate_terms = True
+        # # __post_init__
+        # # 后处理：启用观测损坏（corruption）并将各项拼接为单一观测向量
         
     @configclass
     class CriticCfg(ObsGroup):
@@ -338,7 +316,7 @@ class RewardsCfg:
     # 任务：跟踪线速度（xy），指数核，作为主要奖励
 
     track_ang_vel_z_exp = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=0.5, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+        func=mdp.track_ang_vel_z_exp, weight=0.8, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
     )
     # track_ang_vel_z_exp
     # 任务：跟踪角速度（偏航），指数核，作为次要奖励
@@ -364,18 +342,6 @@ class RewardsCfg:
     # action_rate_l2
     # 惩罚：动作变化率 L2（减少频繁动作变化）
 
-    feet_air_time = RewTerm(
-        func=mdp.feet_air_time,
-        weight=1.0,
-        params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
-            "command_name": "base_velocity",
-            "threshold": 0.25,
-        },
-    )
-    # feet_air_time
-    # 奖励：脚的空中时间（鼓励迈步），使用接触力传感器作为输入
-
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,
@@ -400,13 +366,17 @@ class RewardsCfg:
         weight=1.0,
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
-
-
-    cheetah = RewTerm(
-        func=mdp.encourage_default_pose,
-        weight=1.0,
-        params={"hip_weight": 1.0, "thigh_weight": 0, "calf_weight": 0, "asset_cfg": SceneEntityCfg("robot")}
+    speed_limit = RewTerm(
+        func=mdp.speed_limit,
+        weight=-1.0,
+        params={"threshold": 1.5, "scale": 0.25, "asset_cfg": SceneEntityCfg("robot")},
     )
+
+    # cheetah = RewTerm(
+    #     func=mdp.encourage_default_pose,
+    #     weight=1.0,
+    #     params={"hip_weight": 1.0, "thigh_weight": 0, "calf_weight": 0, "asset_cfg": SceneEntityCfg("robot")}
+    # )
 
     velocity_driven_gait = RewTerm(
         func=mdp.velocity_driven_gait,
@@ -415,24 +385,44 @@ class RewardsCfg:
     )
 
 
+    feet_air_time = RewTerm(
+        func=mdp.feet_air_time,
+        weight=1.0,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
+            "command_name": "base_velocity",
+            "threshold": 0.25,
+        },
+    )
+    # feet_air_time
+    # 奖励：脚的空中时间（鼓励迈步），使用接触力传感器作为输入
 
 
 @configclass
 class TerminationsCfg:
     """Termination terms for the MDP."""
-    # Termination terms for the MDP.
-    # 终止条件配置（例如超时或非法接触）。
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    # time_out
-    # 超时终止项
 
     base_contact = DoneTerm(
         func=mdp.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 1.0},
     )
-    # base_contact
-    # 基座非法接触终止（例如基座碰撞地面）
+
+    bad_orientation = DoneTerm(
+        func=mdp.bad_orientation,
+        params={"limit_angle": 0.8}  # 45 degree
+    )
+
+    base_height = DoneTerm(
+        func=mdp.root_height_below_minimum,  # only for flat terrain
+        params={"minimum_height": 0.20, "sensor_cfg": SceneEntityCfg("height_scanner")}
+    )
+
+    terrain_out_of_bounds = DoneTerm(
+        func=mdp.terrain_out_of_bounds,
+        params={"distance_buffer": 3.0},
+    )
 
 
 @configclass
