@@ -4,8 +4,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from isaaclab.utils import configclass
+import isaaclab.sim as sim_utils
 
-from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg
+from legged_locomotion.tasks.manager_based.legged_locomotion.leggedlocomotion_velocity_env_cfg import LocomotionVelocityRoughEnvCfg
 
 ##
 # Pre-defined configs
@@ -22,10 +23,27 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # post init of parent
         # 调用父类的后初始化以继承并设置基础配置
         super().__post_init__()
+        import inspect, os
 
         # set robot asset and scanner prim path
         # 设置场景中使用的机器人资源以及高度扫描器（height_scanner）所绑定的 prim 路径
+        # self.scene.robot = UNITREE_GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+
+
+        # self.scene.robot = UNITREE_GO2_CFG.replace(
+        #     prim_path="{ENV_REGEX_NS}/Robot",
+        #     spawn=UNITREE_GO2_CFG.spawn.replace(
+        #         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+        #             enabled_self_collisions=False
+        #         )
+        #     ),
+        # )
+
         self.scene.robot = UNITREE_GO2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+
+
         # 将导入的 UNITREE_GO2_CFG 的 prim_path 替换为环境命名空间下的 Robot 路径（每个 env 有自己的命名空间）
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/base"
         # 将高度扫描器绑定到机器人 base 上，确保扫描器在每个环境中正确定位
@@ -46,15 +64,10 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # event
         # 事件（Event）相关调整
         self.events.push_robot = None
-        # 禁用推机器人事件以避免在该配置下引入随机扰动（此处选择关闭）
         self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 3.0)
-        # 调整为更适合小机器人基座质量扰动范围（负表示减少质量，正表示增加）
         self.events.add_base_mass.params["asset_cfg"].body_names = "base"
-        # 指定只影响基座（base）
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "base"
-        # 外力事件也只影响基座
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
-        # 重置关节时使用固定位置比例（缩放为 1.0 表示使用默认初始化范围）
         self.events.reset_base.params = {
             "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
             "velocity_range": {
@@ -66,32 +79,33 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "yaw": (0.0, 0.0),
             },
         }
-        # 重置基座位姿与速度：位姿在指定范围内随机化，速度设为 0（基座不带初始速度）
-        self.events.base_com = None
-        # 禁用基座质心（COM）随机化事件，以保持基座动力学更稳定
-
         # rewards
-        # 奖励项的调整（针对小机器人与训练目标进行微调）
-        self.rewards.feet_air_time.params["sensor_cfg"].body_names = ".*_foot"
-        # 将 feet_air_time 的传感器 body_names 匹配改为小写或其他命名习惯的脚部标识（正则）
-        self.rewards.feet_air_time.weight = 0.01
-        # 缩小脚部空中时间奖励权重，避免过度鼓励大幅抬脚（对小机器人更谨慎）
-        self.rewards.undesired_contacts = None
-        # 移除“不期望接触”惩罚（例如 thigh 接触），在此配置中不需要或会误触发
-        self.rewards.dof_torques_l2.weight = -0.0002
-        # 调整关节力矩惩罚权重（能耗项）
-        self.rewards.track_lin_vel_xy_exp.weight = 1.5
-        # 增加线速度跟踪奖励权重以强化跟踪任务
-        self.rewards.track_ang_vel_z_exp.weight = 0.75
-        # 调整角速度跟踪奖励权重
+
+        # penalties
+        self.rewards.lin_vel_z_l2.weight = -5.0
+        self.rewards.ang_vel_xy_l2.weight = -1e-1
+        self.rewards.dof_torques_l2.weight = -5e-4
         self.rewards.dof_acc_l2.weight = -2.5e-7
-        # 关节加速度惩罚权重（平滑动作）
+        self.rewards.action_rate_l2.weight = -1.0
+        self.rewards.undesired_contacts.weight = -1e3
+        self.rewards.flat_orientation_l2.weight = -50.0
+        self.rewards.dof_pos_limits.weight = -5e2
+        self.rewards.base_height_l2.weight = -1e2
+        self.rewards.body_lin_acc_l2.weight = -5e-4
+
+        # style
+        self.rewards.feet_air_time.weight = 1.0
+        self.rewards.encourage_forward.weight = 2.0
+        self.rewards.speed_limit.weight = 1.0
+        self.rewards.cheetah.weight = 3.0
+        self.rewards.velocity_driven_gait.weight = 5.0
 
         # terminations
-        # 终止条件配置调整
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base"
-        # 将基座接触检测限制为 prim 名称中包含 base 的刚体，确保基座接触触发终止逻辑按预期工作
 
+        # curriculums
+        self.curriculum.terrain_levels = None
+        self.curriculum.command_levels = None
 
 @configclass
 class UnitreeGo2RoughEnvCfg_PLAY(UnitreeGo2RoughEnvCfg):

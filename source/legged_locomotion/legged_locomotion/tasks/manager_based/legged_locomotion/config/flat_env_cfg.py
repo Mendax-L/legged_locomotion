@@ -14,18 +14,22 @@ class UnitreeGo2FlatEnvCfg(UnitreeGo2RoughEnvCfg):
         # post init of parent
         super().__post_init__()
 
+        import inspect, os
+
+
         # override rewards
-        self.rewards.flat_orientation_l2.weight = -2.5
-        self.rewards.feet_air_time.weight = 0.25
+        self.rewards.base_height_l2.params["sensor_cfg"] = None
 
         # change terrain to flat
         self.scene.terrain.terrain_type = "plane"
         self.scene.terrain.terrain_generator = None
-        # no height scan
-        self.scene.height_scanner = None
-        self.observations.policy.height_scan = None
+        self.observations.critic.height_scan = None
         # no terrain curriculum
         self.curriculum.terrain_levels = None
+        self.curriculum.command_levels = None
+        # terminations
+        self.terminations.base_height.params["sensor_cfg"] = None  # world-frame height is fine
+        self.terminations.terrain_out_of_bounds = None  # no need
 
 
 class UnitreeGo2FlatEnvCfg_PLAY(UnitreeGo2FlatEnvCfg):
@@ -41,3 +45,4 @@ class UnitreeGo2FlatEnvCfg_PLAY(UnitreeGo2FlatEnvCfg):
         # remove random pushing event
         self.events.base_external_force_torque = None
         self.events.push_robot = None
+        self.curriculum.command_levels = None

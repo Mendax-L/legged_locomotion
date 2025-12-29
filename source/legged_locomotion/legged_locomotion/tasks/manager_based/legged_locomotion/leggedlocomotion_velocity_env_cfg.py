@@ -372,11 +372,11 @@ class RewardsCfg:
         params={"threshold": 1.5, "scale": 0.25, "asset_cfg": SceneEntityCfg("robot")},
     )
 
-    # cheetah = RewTerm(
-    #     func=mdp.encourage_default_pose,
-    #     weight=1.0,
-    #     params={"hip_weight": 1.0, "thigh_weight": 0, "calf_weight": 0, "asset_cfg": SceneEntityCfg("robot")}
-    # )
+    cheetah = RewTerm(
+        func=mdp.encourage_default_pose,
+        weight=1.0,
+        params={"hip_weight": 1.0, "thigh_weight": 0, "calf_weight": 0, "asset_cfg": SceneEntityCfg("robot")}
+    )
 
     velocity_driven_gait = RewTerm(
         func=mdp.velocity_driven_gait,
@@ -389,7 +389,7 @@ class RewardsCfg:
         func=mdp.feet_air_time,
         weight=1.0,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
             "command_name": "base_velocity",
             "threshold": 0.25,
         },
@@ -466,6 +466,12 @@ class LocomotionVelocityRoughEnvCfg(ManagerBasedRLEnvCfg):
     curriculum: CurriculumCfg = CurriculumCfg()
     # MDP settings
     # MDP 相关设置：奖励、终止、事件、课程
+
+
+
+
+
+
 
     def __post_init__(self):
         """Post initialization."""
