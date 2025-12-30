@@ -6,7 +6,7 @@ class Config:
     use_gamepad = True
     fixed_command = False  # True 则不使用手柄，使用下面的固定命令 False 使用手柄
     command = [0.0, -0, 0]
-    model_path = "logs/rsl_rl/unitree_go2_flat/2025-11-19_19-44-38/exported/policy.pt"  # flat
+    model_path = "logs/rsl_rl/flat/2025-12-29_15-54-30/exported/policy.pt"  # flat
     xml_path = "deployment/resources/go2/scene.xml"
 
     # mujoco simulation
