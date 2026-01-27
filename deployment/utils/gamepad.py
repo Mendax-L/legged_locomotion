@@ -18,6 +18,7 @@ class Gamepad:
             'buttons': {},
             'axes': {},
             'hats': {},
+            'trigger_axis': {},
             'connected': False
         }
 
@@ -42,7 +43,12 @@ class Gamepad:
         self._x_pressed = False
         self._y_pressed = False
         self._lb_pressed = False
-        self._rb_pressed = False
+        self._rb_pressed = False        
+        self._lt_pressed = False
+        self._rt_pressed = False
+
+        self._lt_value = 0.0
+        self._rt_value = 0.0
 
         # 自动识别操作系统，设置手柄按钮映射
         system = platform.system()
@@ -57,15 +63,18 @@ class Gamepad:
                 10: 'rb',  # RB
                 6: 'back',
                 7: 'start',
-                8: 'guide',
-                11: 'ls',
-                12: 'rs'
+                8: 'guide'
             }
 
             self._axis_names = {
                 1: 'left_stick_y',  # 左摇杆Y轴（左右）
                 0: 'left_stick_x',  # 左摇杆X轴（前后）
                 2: 'right_stick_y',  # 右摇杆Y轴
+            }
+
+            self._trigger_axis_names = {
+                2: 'lt',
+                5: 'rt'
             }
 
         elif system == "Windows":
@@ -78,9 +87,7 @@ class Gamepad:
                 5: 'rb',
                 6: 'back',
                 7: 'start',
-                8: 'guide',
-                9: 'ls',
-                10: 'rs'
+                8: 'guide'
             }
 
             self._axis_names = {
@@ -88,6 +95,12 @@ class Gamepad:
                 1: 'left_stick_x',  # 左摇杆X轴（前后）
                 3: 'right_stick_y',  # 右摇杆Y轴
             }
+
+            self._trigger_axis_names = {
+                2: 'lt',
+                5: 'rt'
+            }
+
         else:  # Linux 默认
             self._button_names = {
                 0: 'a',
@@ -98,15 +111,18 @@ class Gamepad:
                 5: 'rb',
                 6: 'back',
                 7: 'start',
-                8: 'guide',
-                9: 'ls',
-                10: 'rs'
+                8: 'guide'
             }
 
             self._axis_names = {
                 1: 'left_stick_y',  # 左摇杆Y轴（左右）
                 0: 'left_stick_x',  # 左摇杆X轴（前后）
                 3: 'right_stick_y',  # 右摇杆Y轴
+            }
+
+            self._trigger_axis_names = {
+                2: 'lt',
+                5: 'rt'
             }
 
         self._hat_names = {
@@ -119,6 +135,8 @@ class Gamepad:
             self._state['axes'][axis_name] = 0.0
         for hat_id, hat_name in self._hat_names.items():
             self._state['hats'][hat_name] = (0, 0)
+        for axis_id, name in self._trigger_axis_names.items():
+            self._state['trigger_axis'][name] = 0.0
 
         self._init_joystick()
 
@@ -157,6 +175,7 @@ class Gamepad:
             pygame.event.pump()
             self._update_state()
             self._update_velocities()
+            self._update_trigger_state()
             elapsed = time.time() - start_time
             time.sleep(max(0, update_interval - elapsed))
 
@@ -180,12 +199,22 @@ class Gamepad:
                     hat_name = self._hat_names.get(hat_id, f'hat_{hat_id}')
                     self._state['hats'][hat_name] = self._joystick.get_hat(hat_id)
 
+                if hasattr(self, '_trigger_axis_names'):
+                    for axis_id, name in self._trigger_axis_names.items():  # 这里的变量是 name
+                        if axis_id < self._joystick.get_numaxes():
+                            # ✅ 修正：使用 name 作为键名
+                            self._state['trigger_axis'][name] = self._joystick.get_axis(axis_id)
+
+
+
+
                 self._a_pressed = self._state['buttons'].get('a', False)
                 self._b_pressed = self._state['buttons'].get('b', False)
                 self._x_pressed = self._state['buttons'].get('x', False)
                 self._y_pressed = self._state['buttons'].get('y', False)
                 self._lb_pressed = self._state['buttons'].get('lb', False)
-                self._rb_pressed = self._state['buttons'].get('rb', False)
+                self._rb_pressed = self._state['buttons'].get('rb', False)                
+
 
         except pygame.error as e:
             print(f"⚠️ 手柄读取错误: {e}")
@@ -197,6 +226,12 @@ class Gamepad:
             self._vel_y = -self._state['axes'].get('left_stick_x', 0.0) * self._vel_y_max
             self._vel_x = -self._state['axes'].get('left_stick_y', 0.0) * self._vel_x_max
             self._vel_yaw = -self._state['axes'].get('right_stick_y', 0.0) * self._vel_yaw_max
+    
+    def _update_trigger_state(self):
+        with self.lock:
+            self._lt_value = self._state['trigger_axis'].get('lt', 0.0)
+            self._rt_value = self._state['trigger_axis'].get('rt', 0.0)
+
 
     def debug_button_mapping(self):
         """调试模式：打印按钮编号，用于确定macOS下LB/RB位置"""
@@ -269,6 +304,16 @@ class Gamepad:
             return self._rb_pressed
 
     @property
+    def lt_value(self):
+        with self.lock:
+            return self._lt_value
+
+    @property
+    def rt_value(self):
+        with self.lock:
+            return self._rt_value
+
+    @property
     def dpad(self):
         with self.lock:
             return self._state['hats'].get('dpad', (0, 0))
@@ -310,7 +355,9 @@ class Gamepad:
         status = (f"速度X：{self.vel_x:.3f} "
                   f"速度Y：{self.vel_y:.3f} "
                   f"速度Yaw：{self.vel_yaw:.3f} | "
-                  f"左摇杆x：{self._state['axes'].get('left_stick_x', 0.0):.3f} "
+                  f"LT：{self.lt_value:.3f} | "
+                  f"RT：{self.rt_value:.3f} | "
+                  f"左摇杆x：{self._state['axes'].get('left_stick_x', 0.0):.3f} | "
                   f"左摇杆y：{self._state['axes'].get('left_stick_y', 0.0):.3f} | "
                   f"右摇杆y：{self._state['axes'].get('right_stick_y', 0.0):.3f} | "
                   f"按键：{', '.join(buttons)} | "
