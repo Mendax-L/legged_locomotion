@@ -79,14 +79,26 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "yaw": (0.0, 0.0),
             },
         }
+
+        self.scene.terrain.max_init_terrain_level = None
+
+        # reduce the number of terrains to save memory
+        # 减少生成的子地形数量以节省内存与加速渲染（play 模式）
+        if self.scene.terrain.terrain_generator is not None:
+            # n = max(1, int(self.scene.num_envs ** 0.5))
+            self.scene.terrain.terrain_generator.num_rows = 16
+            self.scene.terrain.terrain_generator.num_cols = 16
+
         # rewards
+        self.rewards.track_lin_vel_xy_yaw_frame.weight = 5.0
+        self.rewards.track_ang_vel_z_world.weight = 2.0
 
         # penalties
-        self.rewards.lin_vel_z_l2.weight = -5.0
+        self.rewards.lin_vel_z_l2.weight = -2.0
         self.rewards.ang_vel_xy_l2.weight = -1e-1
         self.rewards.dof_torques_l2.weight = -5e-4
         self.rewards.dof_acc_l2.weight = -2.5e-7
-        self.rewards.action_rate_l2.weight = -1.0
+        self.rewards.action_rate_l2.weight = -5e-1
         self.rewards.undesired_contacts.weight = -1e3
         self.rewards.flat_orientation_l2.weight = -50.0
         self.rewards.dof_pos_limits.weight = -5e2
@@ -94,11 +106,10 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.body_lin_acc_l2.weight = -5e-4
 
         # style
-        self.rewards.feet_air_time.weight = 1.0
-        self.rewards.encourage_forward.weight = 2.0
-        self.rewards.speed_limit.weight = 1.0
-        self.rewards.cheetah.weight = 3.0
-        self.rewards.velocity_driven_gait.weight = 5.0
+        self.rewards.feet_air_time.weight = 0 #1.0
+        self.rewards.speed_limit.weight = 0 #1.0
+        self.rewards.cheetah.weight = 0 #2.0
+        self.rewards.velocity_driven_gait.weight = 0 #2.0
 
         # terminations
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base"
@@ -128,9 +139,11 @@ class UnitreeGo2RoughEnvCfg_PLAY(UnitreeGo2RoughEnvCfg):
         # reduce the number of terrains to save memory
         # 减少生成的子地形数量以节省内存与加速渲染（play 模式）
         if self.scene.terrain.terrain_generator is not None:
-            self.scene.terrain.terrain_generator.num_rows = 5
-            self.scene.terrain.terrain_generator.num_cols = 5
+            n = max(1, int(self.scene.num_envs ** 0.5))
+            self.scene.terrain.terrain_generator.num_rows = n
+            self.scene.terrain.terrain_generator.num_cols = n
             self.scene.terrain.terrain_generator.curriculum = False
+            self.scene.terrain.max_init_terrain_level = None
             # 将地形网格缩小为 5x5，并禁用地形难度课程（curriculum），以固定地形集合便于调试
 
         # disable randomization for play
