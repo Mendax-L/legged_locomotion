@@ -44,27 +44,6 @@ def feet_air_time(
     return reward
 
 
-def feet_air_time_positive_biped(env, command_name: str, threshold: float, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Reward long steps taken by the feet for bipeds.
-
-    This function rewards the agent for taking steps up to a specified threshold and also keep one foot at
-    a time in the air.
-
-    If the commands are small (i.e. the agent is not supposed to take a step), then the reward is zero.
-    """
-    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
-    # compute the reward
-    air_time = contact_sensor.data.current_air_time[:, sensor_cfg.body_ids]
-    contact_time = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids]
-    in_contact = contact_time > 0.0
-    in_mode_time = torch.where(in_contact, contact_time, air_time)
-    single_stance = torch.sum(in_contact.int(), dim=1) == 1
-    reward = torch.min(torch.where(single_stance.unsqueeze(-1), in_mode_time, 0.0), dim=1)[0]
-    reward = torch.clamp(reward, max=threshold)
-    # no reward for zero command
-    reward *= torch.norm(env.command_manager.get_command(command_name)[:, :2], dim=1) > 0.1
-    return reward
-
 
 def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
     """Penalize feet sliding.
@@ -83,7 +62,7 @@ def feet_slide(env, sensor_cfg: SceneEntityCfg, asset_cfg: SceneEntityCfg = Scen
     return reward
 
 
-def track_lin_vel_xy_yaw_frame_exp(
+def velocity_tracking_xy(
         env, std: float, command_name: str, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Reward tracking of linear velocity commands (xy axes) in the gravity aligned robot frame using exponential kernel."""
@@ -95,8 +74,7 @@ def track_lin_vel_xy_yaw_frame_exp(
     )
     return torch.exp(-lin_vel_error / std ** 2)
 
-
-def track_ang_vel_z_world_exp(
+def velocity_tracking_yaw(
         env, command_name: str, std: float, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Reward tracking of angular velocity commands (yaw) in world frame using exponential kernel."""
@@ -106,32 +84,10 @@ def track_ang_vel_z_world_exp(
     return torch.exp(-ang_vel_error / std ** 2)
 
 
-def position_command_error_tanh(env: ManagerBasedRLEnv, std: float, command_name: str) -> torch.Tensor:
-    """Reward position tracking with tanh kernel."""
-    command = env.command_manager.get_command(command_name)
-    des_pos_b = command[:, :3]
-    distance = torch.norm(des_pos_b, dim=1)
-    return 1 - torch.tanh(distance / std)
 
 
-def position_command_error_exp(env: ManagerBasedRLEnv, std: float, command_name: str) -> torch.Tensor:
-    """Reward position tracking with tanh kernel."""
-    command = env.command_manager.get_command(command_name)
-    des_pos_b = command[:, :3]
-    distance = torch.norm(des_pos_b, dim=1)
-
-    return torch.exp(-distance / std)
 
 
-def delta_position_command_exp(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
-    command = env.command_manager.get_command(command_name)
-    now_cmd = command[:, :3]
-    last_cmd = env.command_manager._terms["pose_command"].last_pos_command_b
-
-    # distance = torch.clamp(torch.norm(last_cmd, dim=1) - torch.norm(now_cmd, dim=1), max=0.2)
-    distance = torch.norm(last_cmd, dim=1) - torch.norm(now_cmd, dim=1)
-
-    return distance
 
 
 def heading_command_error_abs(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
@@ -146,16 +102,10 @@ def heading_command_error_abs_exp(
         command_name: str,
         scale: float = 0.25
 ) -> torch.Tensor:
-    """
-    奖励机器人朝向与期望方向一致。
 
-    heading_b 是当前朝向误差（通常在 robot 坐标系下），
-    误差越小，reward 越接近 1，误差越大，reward 趋近于 0。
-    """
     command = env.command_manager.get_command(command_name)
     heading_b = command[:, 3]  # heading error in body frame
 
-    # 使用 exp(-|error| / scale) 构造 reward
     reward = torch.exp(-heading_b.abs() / scale)
 
     return reward
@@ -333,6 +283,35 @@ def quat_apply_yaw_broadcast(quat: torch.Tensor, vec: torch.Tensor) -> torch.Ten
     return rotated
 
 
+def safe_base_height_l2(
+        env: ManagerBasedRLEnv,
+        target_height: float,
+        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+        sensor_cfg: SceneEntityCfg | None = None,
+) -> torch.Tensor:
+    """Penalize asset height from its target using L2 squared kernel.
+
+    Note:
+        For flat terrain, target height is in the world frame. For rough terrain,
+        sensor readings can adjust the target height to account for the terrain.
+    """
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    if sensor_cfg is not None:
+        sensor: RayCaster = env.scene[sensor_cfg.name]
+        # Adjust the target height using the sensor data
+        adjusted_target_height = target_height + torch.mean(sensor.data.ray_hits_w[..., 2], dim=1)
+    else:
+        # Use the provided target height directly for flat terrain
+        adjusted_target_height = target_height
+
+    # Compute the L2 squared penalty
+    reward =  torch.square(asset.data.root_pos_w[:, 2] - adjusted_target_height).clamp(-100.0, 100.0)
+    if not torch.isfinite(reward).all():         # 新增
+        print("safe_base_height_l2 出现 inf!", reward)
+    return reward
+# mdp/rewards.py  末尾追加
+
 def velocity_driven_gait(
         env: ManagerBasedRLEnv,
         asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
@@ -396,60 +375,46 @@ def velocity_driven_gait(
     return reward  # shape: [num_envs]
 
 
-def safe_base_height_l2(
-        env: ManagerBasedRLEnv,
-        target_height: float,
-        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-        sensor_cfg: SceneEntityCfg | None = None,
-) -> torch.Tensor:
-    """Penalize asset height from its target using L2 squared kernel.
 
-    Note:
-        For flat terrain, target height is in the world frame. For rough terrain,
-        sensor readings can adjust the target height to account for the terrain.
-    """
-    # extract the used quantities (to enable type-hinting)
-    asset: RigidObject = env.scene[asset_cfg.name]
-    if sensor_cfg is not None:
-        sensor: RayCaster = env.scene[sensor_cfg.name]
-        # Adjust the target height using the sensor data
-        adjusted_target_height = target_height + torch.mean(sensor.data.ray_hits_w[..., 2], dim=1)
-    else:
-        # Use the provided target height directly for flat terrain
-        adjusted_target_height = target_height
 
-    # Compute the L2 squared penalty
-    reward =  torch.square(asset.data.root_pos_w[:, 2] - adjusted_target_height).clamp(-100.0, 100.0)
-    if not torch.isfinite(reward).all():         # 新增
-        print("safe_base_height_l2 出现 inf!", reward)
-    return reward
-# mdp/rewards.py  末尾追加
-import functools, inspect, isaaclab.managers as mgr
+# def feet_air_time_positive_biped(env, command_name: str, threshold: float, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+#     """Reward long steps taken by the feet for bipeds.
+#     This function rewards the agent for taking steps up to a specified threshold and also keep one foot at
+#     a time in the air.
+#     If the commands are small (i.e. the agent is not supposed to take a step), then the reward is zero.
+#     """
+#     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+#     # compute the reward
+#     air_time = contact_sensor.data.current_air_time[:, sensor_cfg.body_ids]
+#     contact_time = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids]
+#     in_contact = contact_time > 0.0
+#     in_mode_time = torch.where(in_contact, contact_time, air_time)
+#     single_stance = torch.sum(in_contact.int(), dim=1) == 1
+#     reward = torch.min(torch.where(single_stance.unsqueeze(-1), in_mode_time, 0.0), dim=1)[0]
+#     reward = torch.clamp(reward, max=threshold)
+#     # no reward for zero command
+#     reward *= torch.norm(env.command_manager.get_command(command_name)[:, :2], dim=1) > 0.1
+#     return reward
 
-def inf_guard(fn, abs_limit=1e3):
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        ret = fn(*args, **kwargs)
+# def position_command_error_tanh(env: ManagerBasedRLEnv, std: float, command_name: str) -> torch.Tensor:
+#     """Reward position tracking with tanh kernel."""
+#     command = env.command_manager.get_command(command_name)
+#     des_pos_b = command[:, :3]
+#     distance = torch.norm(des_pos_b, dim=1)
+#     return 1 - torch.tanh(distance / std)
 
-        # 1) NaN/Inf
-        bad_finite = ~torch.isfinite(ret)
-        # 2) 绝对值爆大（finite 但危险）
-        bad_mag = ret.abs() > abs_limit
 
-        if bad_finite.any() or bad_mag.any():
-            # 打印最极端的值，方便定位
-            mx = ret.max().item()
-            mn = ret.min().item()
-            print(f"[REW-GUARD] {fn.__module__}.{fn.__name__} bad! min={mn:.3e}, max={mx:.3e}")
+# def position_command_error_exp(env: ManagerBasedRLEnv, std: float, command_name: str) -> torch.Tensor:
+#     """Reward position tracking with tanh kernel."""
+#     command = env.command_manager.get_command(command_name)
+#     des_pos_b = command[:, :3]
+#     distance = torch.norm(des_pos_b, dim=1)
+#     return torch.exp(-distance / std)
 
-            # 直接钳制（先止血）
-            ret = torch.nan_to_num(ret, nan=0.0, posinf=0.0, neginf=0.0)
-            ret = ret.clamp(-abs_limit, abs_limit)
-        return ret
-    return wrapper
-
-import sys, inspect
-_this = sys.modules[__name__]
-for name, obj in list(vars(_this).items()):
-    if inspect.isfunction(obj) and obj.__module__ == __name__:
-        setattr(_this, name, inf_guard(obj, abs_limit=1e3))
+# def delta_position_command_exp(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
+#     command = env.command_manager.get_command(command_name)
+#     now_cmd = command[:, :3]
+#     last_cmd = env.command_manager._terms["pose_command"].last_pos_command_b
+#     # distance = torch.clamp(torch.norm(last_cmd, dim=1) - torch.norm(now_cmd, dim=1), max=0.2)
+#     distance = torch.norm(last_cmd, dim=1) - torch.norm(now_cmd, dim=1)
+#     return distance

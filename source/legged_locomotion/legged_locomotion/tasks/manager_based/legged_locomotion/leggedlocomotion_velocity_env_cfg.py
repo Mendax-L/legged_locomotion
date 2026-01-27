@@ -110,10 +110,10 @@ class CommandsCfg:
     # Command specifications for the MDP.
     # MDP 的命令规范配置。
 
-    base_velocity = mdp.UniformVelocityCommandCfg(
+    velocity_command = mdp.UniformVelocityCommandCfg(
         asset_name="robot",
         resampling_time_range=(0.5, 5.0),
-        rel_standing_envs=0.02,
+        rel_standing_envs=0.1,
         rel_heading_envs=1.0,
         heading_command=True,
         heading_control_stiffness=0.5,
@@ -122,7 +122,7 @@ class CommandsCfg:
             lin_vel_x=(-1.0, 1.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), heading=(-math.pi, math.pi)
         ),
     )
-    # base_velocity
+    # velocity_command
     # 基础速度命令配置，包含线速度与角速度范围以及重采样时间等参数
 
 
@@ -139,8 +139,6 @@ class ActionsCfg:
         use_default_offset=True,
         clip={".*": (-100.0, 100.0)}
     )
-    # joint_pos
-    # 关节位置动作配置：对所有关节应用，缩放因子为 0.5，使用默认偏移
 
 
 @configclass
@@ -155,32 +153,17 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
-
-
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
-
-
-        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
-
-
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "velocity_command"})
         joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-
-
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
-
-
         actions = ObsTerm(func=mdp.last_action)
 
 
-        # def __post_init__(self):
-        #     self.enable_corruption = True
-        #     # 拼接的影响可做测试
-        #     self.concatenate_terms = True
-        # # __post_init__
-        # # 后处理：启用观测损坏（corruption）并将各项拼接为单一观测向量
+
         
     @configclass
     class CriticCfg(ObsGroup):
@@ -188,6 +171,7 @@ class ObservationsCfg:
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
         projected_gravity = ObsTerm(func=mdp.projected_gravity)
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "velocity_command"})
         joint_pos = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         actions = ObsTerm(func=mdp.last_action)
@@ -309,46 +293,36 @@ class RewardsCfg:
     # 奖励项配置（任务奖励与惩罚项）。
 
     # -- task
-    track_lin_vel_xy_exp = RewTerm(
-        func=mdp.track_lin_vel_xy_exp, weight=1.0, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+    velocity_tracking_xy = RewTerm(
+        func=mdp.velocity_tracking_xy, weight=1.0, params={"command_name": "velocity_command", "std": math.sqrt(3)}
     )
-    # track_lin_vel_xy_exp
-    # 任务：跟踪线速度（xy），指数核，作为主要奖励
 
-    track_ang_vel_z_exp = RewTerm(
-        func=mdp.track_ang_vel_z_exp, weight=0.8, params={"command_name": "base_velocity", "std": math.sqrt(0.25)}
+    velocity_tracking_xy_fine_grained = RewTerm(
+        func=mdp.velocity_tracking_xy, weight=1.0, params={"command_name": "velocity_command", "std": math.sqrt(0.25)}
     )
-    # track_ang_vel_z_exp
+    
+    velocity_tracking_yaw = RewTerm(
+        func=mdp.velocity_tracking_yaw, weight=1.0, params={"command_name": "velocity_command", "std": math.sqrt(0.5)}
+    )
+
+    velocity_tracking_yaw_fine_grained = RewTerm(
+        func=mdp.velocity_tracking_yaw, weight=1.0, params={"command_name": "velocity_command", "std": math.sqrt(0.1)}
+    )
+    # velocity_tracking_yaw
     # 任务：跟踪角速度（偏航），指数核，作为次要奖励
 
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-1.0)
-    # lin_vel_z_l2
-    # 惩罚：竖直方向线速度 L2（避免跳跃）
-
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-1.0)
-    # ang_vel_xy_l2
-    # 惩罚：平面内滚摆角速度 L2（保持稳定）
-
     dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0)
-    # dof_torques_l2
-    # 惩罚：关节扭矩 L2（鼓励省能量）
-
     dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-1.0)
-    # dof_acc_l2
-    # 惩罚：关节加速度 L2（平滑动作）
-
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-1.0)
-    # action_rate_l2
-    # 惩罚：动作变化率 L2（减少频繁动作变化）
-
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*thigh"), "threshold": 1.0},
     )
-    # undesired_contacts
-    # 惩罚：不希望的接触（如大腿与地面接触）
+
 
     # -- optional penalties
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-1.0)
@@ -361,11 +335,6 @@ class RewardsCfg:
     body_lin_acc_l2 = RewTerm(func=mdp.body_lin_acc_l2, weight=-1.0)
 
     # style
-    encourage_forward = RewTerm(
-        func=mdp.encourage_forward,
-        weight=1.0,
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
     speed_limit = RewTerm(
         func=mdp.speed_limit,
         weight=-1.0,
@@ -375,7 +344,7 @@ class RewardsCfg:
     cheetah = RewTerm(
         func=mdp.encourage_default_pose,
         weight=1.0,
-        params={"hip_weight": 1.0, "thigh_weight": 0, "calf_weight": 0, "asset_cfg": SceneEntityCfg("robot")}
+        params={"hip_weight": 5.0, "thigh_weight": 1, "calf_weight": 1, "asset_cfg": SceneEntityCfg("robot")}
     )
 
     velocity_driven_gait = RewTerm(
@@ -390,12 +359,19 @@ class RewardsCfg:
         weight=1.0,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
-            "command_name": "base_velocity",
+            "command_name": "velocity_command",
             "threshold": 0.25,
         },
     )
-    # feet_air_time
-    # 奖励：脚的空中时间（鼓励迈步），使用接触力传感器作为输入
+    
+    feet_slide = RewTerm(
+        func=mdp.feet_slide, # 
+        weight=-1.0,         
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot")
+        },
+    )
 
 
 @configclass
@@ -486,7 +462,7 @@ class LocomotionVelocityRoughEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.render_interval = self.decimation
         self.sim.physics_material = self.scene.terrain.physics_material
         self.sim.physx.gpu_max_patch_count = 2 ** 26
-        self.sim.physx.gpu_max_rigid_patch_count = 10 * 2 ** 18 #重要！！！
+        self.sim.physx.gpu_max_rigid_patch_count = 10 * 2 ** 18 #！！！
         # simulation settings
         # 仿真设置：物理步长、渲染间隔、物理材质、PhysX 参数
 

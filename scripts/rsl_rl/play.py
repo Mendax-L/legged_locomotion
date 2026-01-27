@@ -76,6 +76,7 @@ from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper, export_po
 import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
+import legged_locomotion.tasks  # noqa: F401
 
 # PLACEHOLDER: Extension template (do not remove this comment)
 

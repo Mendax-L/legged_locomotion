@@ -3,15 +3,14 @@ export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6
 # conda init
 # conda activate env_isaaclab
 
-export CUDA_VISIBLE_DEVICES=0;python scripts/rsl_rl/train.py --task=Legged-Locomotion-Flat-Unitree-Go2-v0 --num_env 4096 --headless --experiment_name flat --max_iterations 100000 --video
+# export CUDA_VISIBLE_DEVICES=0;python scripts/rsl_rl/train.py --task=Legged-Locomotion-Rough-Unitree-Go2-v0 --num_env 1024 --headless --experiment_name rough --max_iterations 80000 
 
-# export CUDA_VISIBLE_DEVICES=1;python scripts/rsl_rl/play.py --task=Legged-Locomotion-Flat-Unitree-Go2-v0 --checkpoint logs/rsl_rl/unitree_go2_flat/2025-12-10_16-13-19/model_22850.pt --enable_cameras --video --num_env 512 --video_length 2000 --headless
-# export CUDA_VISIBLE_DEVICES=6;python scripts/rsl_rl/play.py --task=Legged-Locomotion-Flat-Unitree-Go2-v0 --checkpoint logs/rsl_rl/unitree_go2_flat/2025-11-19_19-44-38/model_9999.pt --enable_cameras --video --num_env 512 --video_length 2000 --headless
-
+export CUDA_VISIBLE_DEVICES=1;python scripts/rsl_rl/play.py --task=Legged-Locomotion-Rough-Unitree-Go2-Play-v0  --experiment_name rough --checkpoint logs/rsl_rl/rough/2026-01-20_12-08-45/model_14000.pt --enable_cameras --video --num_env 512 --video_length 2000 --headless
 
 
+# export CUDA_VISIBLE_DEVICES=3;python scripts/rsl_rl/train.py --task=Legged-Locomotion-Flat-Unitree-Go2-v0 --num_env 4096 --headless --experiment_name flat --max_iterations 20000 --video
 
-
+# export CUDA_VISIBLE_DEVICES=0;python scripts/rsl_rl/play.py --task=Legged-Locomotion-Flat-Unitree-Go2-Play-v0  --experiment_name flat --checkpoint logs/rsl_rl/flat/2026-01-15_20-09-22/model_15000.pt --enable_cameras --video --num_env 512 --video_length 2000 --headless
 
 
 
