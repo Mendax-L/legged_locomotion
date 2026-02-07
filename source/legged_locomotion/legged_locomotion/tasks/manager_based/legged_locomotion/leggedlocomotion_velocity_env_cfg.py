@@ -110,21 +110,29 @@ class CommandsCfg:
     # Command specifications for the MDP.
     # MDP 的命令规范配置。
 
+    # velocity_command = mdp.UniformVelocityCommandCfg(
+    #     asset_name="robot",
+    #     resampling_time_range=(0.5, 5.0),
+    #     rel_standing_envs=0.1,
+    #     rel_heading_envs=1.0,
+    #     heading_command=True,
+    #     heading_control_stiffness=0.5,
+    #     debug_vis=True,
+    #     ranges=mdp.UniformVelocityCommandCfg.Ranges(
+    #         lin_vel_x=(-1.0, 1.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), heading=(-math.pi, math.pi)
+    #     ),
+    # )
+    # velocity_command
+    # 基础速度命令配置，包含线速度与角速度范围以及重采样时间等参数
     velocity_command = mdp.UniformVelocityCommandCfg(
         asset_name="robot",
         resampling_time_range=(0.5, 5.0),
         rel_standing_envs=0.1,
-        rel_heading_envs=1.0,
-        heading_command=True,
-        heading_control_stiffness=0.5,
         debug_vis=True,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.0, 1.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0), heading=(-math.pi, math.pi)
+            lin_vel_x=(-1.0, 1.0), lin_vel_y=(-1.0, 1.0), ang_vel_z=(-1.0, 1.0)
         ),
     )
-    # velocity_command
-    # 基础速度命令配置，包含线速度与角速度范围以及重采样时间等参数
-
 
 @configclass
 class ActionsCfg:
@@ -344,7 +352,7 @@ class RewardsCfg:
     cheetah = RewTerm(
         func=mdp.encourage_default_pose,
         weight=1.0,
-        params={"hip_weight": 5.0, "thigh_weight": 1, "calf_weight": 1, "asset_cfg": SceneEntityCfg("robot")}
+        params={"hip_weight": 1.0, "thigh_weight": 0.25, "calf_weight": 0.25, "asset_cfg": SceneEntityCfg("robot")}
     )
 
     velocity_driven_gait = RewTerm(
@@ -373,6 +381,18 @@ class RewardsCfg:
         },
     )
 
+    # stand_with_all_feet = RewTerm(
+    #     func=mdp.stand_with_all_feet,
+    #     weight=1.0,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
+    #         "command_name": "velocity_command",
+    #         "vel_threshold": 0.05,
+    #         "rot_threshold": 0.1,
+    #         "contact_force_threshold": 5.0
+    #     },
+    # )
+
 
 @configclass
 class TerminationsCfg:
@@ -385,10 +405,10 @@ class TerminationsCfg:
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 1.0},
     )
 
-    bad_orientation = DoneTerm(
-        func=mdp.bad_orientation,
-        params={"limit_angle": 0.8}  # 45 degree
-    )
+    # bad_orientation = DoneTerm(
+    #     func=mdp.bad_orientation,
+    #     params={"limit_angle": 0.8}  # 45 degree
+    # )
 
     base_height = DoneTerm(
         func=mdp.root_height_below_minimum,  # only for flat terrain

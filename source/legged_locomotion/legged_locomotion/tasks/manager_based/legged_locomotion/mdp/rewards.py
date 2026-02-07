@@ -375,6 +375,42 @@ def velocity_driven_gait(
     return reward  # shape: [num_envs]
 
 
+# def stand_with_all_feet(
+#         env: ManagerBasedRLEnv,
+#         sensor_cfg: SceneEntityCfg,
+#         command_name: str,
+#         vel_threshold: float = 0.05,
+#         rot_threshold: float = 0.1,
+#         contact_force_threshold: float = 5.0,
+# ) -> torch.Tensor:
+#     """Reward robot for keeping all feet in contact with the ground when standing still."""
+#     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+
+#     # Contact forces (world frame)
+#     contact_forces = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, :]
+#     # shape: (num_envs, num_feet, 3)
+
+#     # A foot is considered in contact if force magnitude is above threshold
+#     contact_states = torch.norm(contact_forces, dim=-1) > contact_force_threshold
+#     # shape: (num_envs, num_feet), bool
+
+#     # Base linear velocity
+#     command_speed = torch.norm(env.command_manager.get_command(command_name)[:, :2], dim=1)
+#     command_rot = env.command_manager.get_command(command_name)[:, 2]
+
+#     # Standing condition
+#     is_standing = (command_speed < vel_threshold) & (command_rot < rot_threshold)
+
+#     # Number of feet in contact
+#     num_feet_in_contact = torch.sum(contact_states.float(), dim=1)
+
+#     # Reward: all feet on ground when standing
+#     reward = (num_feet_in_contact == len(sensor_cfg.body_ids)).float()
+#     reward = reward * is_standing.float()
+
+#     return reward
+
+
 
 
 # def feet_air_time_positive_biped(env, command_name: str, threshold: float, sensor_cfg: SceneEntityCfg) -> torch.Tensor:

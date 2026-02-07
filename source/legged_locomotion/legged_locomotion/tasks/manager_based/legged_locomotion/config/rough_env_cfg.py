@@ -33,7 +33,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # event
         # 事件（Event）相关调整
-        self.events.push_robot = None
+        # self.events.push_robot = None
         self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 3.0)
         self.events.add_base_mass.params["asset_cfg"].body_names = "base"
         self.events.base_external_force_torque.params["asset_cfg"].body_names = "base"
@@ -75,13 +75,14 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.speed_limit.weight = 0 #1.0
         self.rewards.cheetah.weight = 3.0
         self.rewards.velocity_driven_gait.weight = 0 #2.0
+        self.stand_with_all_feet = 2.0
 
         # terminations
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base"
 
         # curriculums
-        self.curriculum.terrain_levels = None
-        self.curriculum.command_levels = None
+        # self.curriculum.terrain_levels = None
+
 
 @configclass
 class UnitreeGo2RoughEnvCfg_PLAY(UnitreeGo2RoughEnvCfg):
