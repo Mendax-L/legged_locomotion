@@ -165,12 +165,12 @@ def _transform_policy_obs_left_right(env: ManagerBasedRLEnv, obs: torch.Tensor) 
 
     # base lin vel (privileged)
     # 基座线速度（特权信息）
-    if "base_lin_vel" in env.observation_manager.active_terms["critic"]:
+    if "base_lin_vel" in env.observation_manager.active_terms["policy"]:
         obs[:, 45:48] = obs[:, 45:48] * torch.tensor([1, -1, 1], device=device)
 
     # note: this is hard-coded for grid-pattern of ordering "xy" and size (1.6, 1.0)
     # 注意：以下对 height_scan 的处理基于硬编码，假设网格按 "xy" 排序且尺寸为 (1.6, 1.0)
-    if "height_scan" in env.observation_manager.active_terms["critic"]:
+    if "height_scan" in env.observation_manager.active_terms["policy"]:
         obs[:, 48:235] = obs[:, 48:235].view(-1, 11, 17).flip(dims=[1]).view(-1, 11 * 17)
 
     return obs
@@ -235,7 +235,7 @@ def _transform_policy_obs_front_back(env: ManagerBasedRLEnv, obs: torch.Tensor) 
 
     # lin vel
     # 线速度
-    if "base_lin_vel" in env.observation_manager.active_terms["critic"]:
+    if "base_lin_vel" in env.observation_manager.active_terms["policy"]:
         obs[:, 45:48] = obs[:, 45:48] * torch.tensor([-1, 1, 1], device=device)
     # # lin vel
     # # 线速度
