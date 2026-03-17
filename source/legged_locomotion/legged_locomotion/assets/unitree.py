@@ -12,7 +12,7 @@ import isaaclab.sim as sim_utils
 from isaaclab.actuators import DCMotorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 
-from go2_location_control.assets import ISAACLAB_ASSETS_DATA_DIR
+from legged_locomotion.assets import ISAACLAB_ASSETS_DATA_DIR
 
 ##
 # Configuration
@@ -20,7 +20,7 @@ from go2_location_control.assets import ISAACLAB_ASSETS_DATA_DIR
 
 UNITREE_GO2_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=f"{ISAACLAB_ASSETS_DATA_DIR}/assets/go2/go2.usd",
+        usd_path=f"{ISAACLAB_ASSETS_DATA_DIR}/Robots/Unitree/Go2/go2.usd",
         activate_contact_sensors=True, # 启用碰撞传感器
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False, # 启用重力

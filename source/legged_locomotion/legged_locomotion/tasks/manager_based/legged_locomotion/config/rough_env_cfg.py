@@ -13,7 +13,7 @@ from legged_locomotion.tasks.manager_based.legged_locomotion.leggedlocomotion_ve
 # from isaaclab_assets.robots.unitree import UNITREE_GO2_CFG  # isort: skip
 
 
-from go2_location_control.assets.unitree import UNITREE_GO2_CFG
+from legged_locomotion.assets.unitree import UNITREE_GO2_CFG
 
 
 
