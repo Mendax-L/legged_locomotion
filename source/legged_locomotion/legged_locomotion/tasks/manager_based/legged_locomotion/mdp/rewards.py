@@ -368,10 +368,10 @@ def velocity_driven_gait(
     reward_consistent = torch.exp(-gait_sharpness * consistent_error)
 
     # Step 3: Interpolated reward
-    # reward = lambda_trot * reward_trot + lambda_bound * reward_bound + reward_consistent
-    reward = 1 * reward_trot + 0 * reward_bound + reward_consistent
-    if not torch.isfinite(reward).all():         # 新增
-        print("velocity_driven_gait 出现 inf!", reward)
+    reward = lambda_trot * reward_trot + lambda_bound * reward_bound + reward_consistent
+    # reward = 1 * reward_trot + 0 * reward_bound + reward_consistent
+    # if not torch.isfinite(reward).all():         # 新增
+    #     print("velocity_driven_gait 出现 inf!", reward)
     return reward  # shape: [num_envs]
 
 

@@ -126,7 +126,7 @@ class CommandsCfg:
     # 基础速度命令配置，包含线速度与角速度范围以及重采样时间等参数
     velocity_command = mdp.UniformVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(0.5, 5.0),
+        resampling_time_range=(4.0,8.0),
         rel_standing_envs=0.1,
         debug_vis=True,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
@@ -287,8 +287,8 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
         mode="interval",
-        interval_range_s=(10.0, 15.0),
-        params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
+        interval_range_s=(5.0, 10.0),
+        params={"velocity_range": {"x": (-0.6, 0.6), "y": (-0.6, 0.6)}},
     )
     # push_robot
     # 周期性事件：给予机器人推力模拟干扰，间隔范围已设
@@ -352,7 +352,7 @@ class RewardsCfg:
     cheetah = RewTerm(
         func=mdp.encourage_default_pose,
         weight=1.0,
-        params={"hip_weight": 1.0, "thigh_weight": 0.25, "calf_weight": 0.25, "asset_cfg": SceneEntityCfg("robot")}
+        params={"hip_weight": 1.0, "thigh_weight": 0, "calf_weight": 0, "asset_cfg": SceneEntityCfg("robot")}
     )
 
     velocity_driven_gait = RewTerm(
@@ -368,7 +368,7 @@ class RewardsCfg:
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
             "command_name": "velocity_command",
-            "threshold": 0.25,
+            "threshold": 0.3,
         },
     )
     
@@ -381,17 +381,7 @@ class RewardsCfg:
         },
     )
 
-    # stand_with_all_feet = RewTerm(
-    #     func=mdp.stand_with_all_feet,
-    #     weight=1.0,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
-    #         "command_name": "velocity_command",
-    #         "vel_threshold": 0.05,
-    #         "rot_threshold": 0.1,
-    #         "contact_force_threshold": 5.0
-    #     },
-    # )
+
 
 
 @configclass
@@ -405,10 +395,10 @@ class TerminationsCfg:
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 1.0},
     )
 
-    # bad_orientation = DoneTerm(
-    #     func=mdp.bad_orientation,
-    #     params={"limit_angle": 0.8}  # 45 degree
-    # )
+    bad_orientation = DoneTerm(
+        func=mdp.bad_orientation,
+        params={"limit_angle": 0.8}  # 45 degree
+    )
 
     base_height = DoneTerm(
         func=mdp.root_height_below_minimum,  # only for flat terrain

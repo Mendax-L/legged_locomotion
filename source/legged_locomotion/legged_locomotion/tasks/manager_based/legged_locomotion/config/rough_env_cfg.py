@@ -54,8 +54,8 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # rewards
         self.rewards.velocity_tracking_xy.weight = 10.0
         self.rewards.velocity_tracking_xy_fine_grained.weight = 25.0
-        self.rewards.velocity_tracking_yaw.weight = 10.0
-        self.rewards.velocity_tracking_yaw_fine_grained.weight = 25.0
+        self.rewards.velocity_tracking_yaw.weight = 8.0
+        self.rewards.velocity_tracking_yaw_fine_grained.weight = 20.0
 
         # penalties
         self.rewards.lin_vel_z_l2.weight = -5.0
@@ -66,7 +66,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.undesired_contacts.weight = -1e3
         self.rewards.flat_orientation_l2.weight = -50.0
         self.rewards.dof_pos_limits.weight = -5e2
-        self.rewards.base_height_l2.weight = -1e2
+        self.rewards.base_height_l2.weight = -1
         self.rewards.body_lin_acc_l2.weight = -5e-4
 
         # style
@@ -74,14 +74,13 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.feet_slide.weight = -2.0
         self.rewards.speed_limit.weight = 0 #1.0
         self.rewards.cheetah.weight = 3.0
-        self.rewards.velocity_driven_gait.weight = 0 #2.0
-        self.stand_with_all_feet = 2.0
+        self.rewards.velocity_driven_gait.weight = 5.0 #2.0
 
         # terminations
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base"
 
         # curriculums
-        # self.curriculum.terrain_levels = None
+        self.curriculum.terrain_levels = None
 
 
 @configclass
